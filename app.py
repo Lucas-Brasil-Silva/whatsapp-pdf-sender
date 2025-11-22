@@ -1,7 +1,7 @@
 import flet as ft
 import time
 import threading
-from send_pdf_whatsapp_selenium import send_pdf
+from send_pdf_whatsapp_selenium import send_pdf, fechar_driver
 import gerenciador_csv
 import lista_pdfs
 
@@ -14,7 +14,22 @@ def main(page: ft.Page):
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.window_min_width = 500
     page.window_height = 700
+    page.window_prevent_close = True
 
+    def evento_janela(e):
+        if e.data == "close":
+            page.dialog = ft.AlertDialog(
+                title=ft.Text("Encerrando..."),
+                content=ft.Text("Fechando o navegador e parando processos."),
+                open=True
+            )
+            page.update()
+
+            fechar_driver()
+
+            page.window_destroy()
+    
+    page.on_window_event = evento_janela
     # ==============================================================================
     # ELEMENTOS DA UI
     # ==============================================================================
@@ -117,6 +132,8 @@ def main(page: ft.Page):
         if mensagem is None or mensagem.strip() == "":
             txt_mensagem.error_text = "Digite uma mensagem!"
             page.update()
+            lista_pdfs.criar_pastas()
+            gerenciador_csv.verificar_arquivo_csv()
             return
         
         else:
@@ -133,7 +150,7 @@ def main(page: ft.Page):
                 page.update()
 
             threading.Thread(target=thread_target).start()
-
+            
             # Trava UI
             btn_enviar.disabled = True
             txt_mensagem.disabled = True
