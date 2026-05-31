@@ -206,3 +206,19 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+favicon.ico
+
+# Dados pessoais e contatos
+*.csv
+Contatos*.csv
+
+# Perfil do Selenium com sessão do WhatsApp
+selenium_whatsapp_profile/
+
+# Pastas com PDFs (arquivos locais)
+enviar_pdfs/
+pdfs_enviados/
+
+# Arquivos de especificação do PyInstaller
+*.spec

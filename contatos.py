@@ -1,9 +1,10 @@
 import csv
+from pathlib import Path
 from typing import List, Dict, Optional
 from file_organizer import CAMINHO_BASE
 
-NOME_ARQUIVO = "Contatos Colaboradores.csv"
-CAMINHO_ARQUIVO_CSV = CAMINHO_BASE / NOME_ARQUIVO
+NOME_ARQUIVO = Path("Contatos Colaboradores.csv")
+CAMINHO_ARQUIVO_CSV = NOME_ARQUIVO
 COL_COLABORADOR = "Colaborador"
 COL_TELEFONE = "Telefone"
 CABECALHO = [COL_COLABORADOR, COL_TELEFONE]

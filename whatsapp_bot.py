@@ -160,5 +160,6 @@ def processar_fila_envio(caminhos_arquivos: List[str], mensagem: str, callbacks)
             cb_progresso(total, sucessos, erros)
             
     finally:
+        input("Pressione ENTER para finalizar o processo...")
         bot.fechar()
         cb_log("Processo finalizado.", "info")

@@ -15,8 +15,9 @@ def obter_caminho_area_de_trabalho() -> Path:
     return home / "Área de Trabalho"
 
 CAMINHO_BASE = obter_caminho_area_de_trabalho()
-PASTA_ENVIAR = CAMINHO_BASE / "enviar_pdfs"
-PASTA_ENVIADOS = CAMINHO_BASE / "pdfs_enviados"
+
+PASTA_ENVIAR = Path("enviar_pdfs")
+PASTA_ENVIADOS = Path("pdfs_enviados")
 
 def criar_estruturas_pastas() -> None:
     """
