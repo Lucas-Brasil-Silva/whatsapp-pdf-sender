@@ -1,4 +1,7 @@
 import time
+import subprocess
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
 from pathlib import Path
 from typing import List, Callable, Optional
 from selenium import webdriver
@@ -74,6 +77,21 @@ class WhatsAppBot:
         """
         self.driver.execute_script(script_js, elemento, mensagem)
 
+    def copiar_arquivo_para_clipboard(self, caminho_arquivo: str):
+        """
+        Usa o PowerShell para copiar um arquivo para a área de transferência
+        exatamente como se você tivesse dado Ctrl+C no Windows Explorer.
+        """
+        # Normaliza o caminho para o formato do Windows
+        path = Path(caminho_arquivo).absolute()
+ 
+        # Comando PowerShell que coloca o ARQUIVO na memória (não o texto)
+        cmd = f'powershell -command "Set-Clipboard -LiteralPath \'{str(path)}\'"'
+ 
+        # Executa o comando sem mostrar janelas pretas
+        subprocess.run(cmd, shell=True)
+        time.sleep(1) # Dá um tempinho para o Windows processar
+
     def enviar_arquivo(self, caminho_pdf: Path, telefone: str, mensagem: str = None) -> bool:
         """Lógica isolada de envio de UM arquivo."""
 
@@ -82,24 +100,32 @@ class WhatsAppBot:
             link = f"https://web.whatsapp.com/send?phone={phone_digits}"
             self.driver.get(link)
 
-            attach_btn = self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.SELECTORS['attach_btn'])))
+            # 1. Espera a caixa de texto PRINCIPAL aparecer (sinal que o chat carregou)
+            # Usamos o seletor da caixa de mensagem padrão do whats
+            caixa_msg = self.wait.until(EC.element_to_be_clickable(
+                (By.CSS_SELECTOR, "div[contenteditable='true'][data-tab='10']")
+            ))
+
+            # 2. Copia o arquivo para a memória
+            self.copiar_arquivo_para_clipboard(caminho_pdf)
             
-            attach_btn.click()
+            # 3. CRUCIAL: Clica na caixa para trazer o foco de volta para o navegador
+            # Sem isso, o Ctrl+V pode falhar porque o PowerShell roubou o foco
+            caixa_msg.click()
+            time.sleep(1)
+
+            # 4. Cola (Ctrl + V)
+            acao = ActionChains(self.driver)
+            acao.key_down(Keys.CONTROL).send_keys('v').key_up(Keys.CONTROL).perform()
+            
             time.sleep(0.5)
-            
-            file_inputs = self.driver.find_elements(By.CSS_SELECTOR, self.SELECTORS['input_file'])
-            if not file_inputs:
-                return False
-            
-            file_inputs[0].send_keys(str(caminho_pdf.absolute()))
-            
             if mensagem:
                 caption_box = self.wait.until(EC.presence_of_element_located(
                     (By.XPATH, "//div[@contenteditable='true' and @aria-label='Digite uma mensagem']")
                 ))
                 time.sleep(0.5)
                 self._inserir_mensagem_js(caption_box, mensagem)
-
+            time.sleep(1)
             send_btn = self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.SELECTORS['send_btn'])))
             send_btn.click()
             
@@ -134,7 +160,7 @@ def processar_fila_envio(caminhos_arquivos: List[str], mensagem: str, callbacks)
             caminho = Path(caminho_str)
             nome_arquivo = caminho.name
             
-            nome_colaborador = caminho.stem.split('-')[-1].strip()
+            nome_colaborador = caminho.stem.split('-')[-2].strip()
             
             telefone = buscar_telefone(nome_colaborador)
             
