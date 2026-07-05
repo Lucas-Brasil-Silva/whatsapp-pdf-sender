@@ -136,9 +136,65 @@ class WhatsAppBot:
             print(f"Erro interno no envio: {e}")
             return False
 
+    def enviar_texto(self, telefone: str, mensagem: str) -> bool:
+        try:
+            phone_digits = ''.join(filter(str.isdigit, telefone))
+            self.driver.get(f"https://web.whatsapp.com/send?phone={phone_digits}")
+            caixa = self.wait.until(EC.element_to_be_clickable(
+                (By.CSS_SELECTOR, "div[contenteditable='true'][data-tab='10']")
+            ))
+            caixa.click()
+            time.sleep(0.5)
+            self._inserir_mensagem_js(caixa, mensagem)
+            time.sleep(1)
+            send_btn = self.wait.until(EC.element_to_be_clickable(
+                (By.CSS_SELECTOR, self.SELECTORS['send_btn'])
+            ))
+            send_btn.click()
+            time.sleep(3)
+            return True
+        except Exception as e:
+            print(f"Erro no envio de texto: {e}")
+            return False
+
     def fechar(self):
         if self.driver:
             self.driver.quit()
+
+def enviar_para_lista(colaboradores: List[dict], mensagem: str, callbacks, caminho_arquivo: Optional[Path] = None):
+    """Envia mensagem (com ou sem arquivo) para uma lista de colaboradores (modo pontual)."""
+    cb_log, cb_progresso = callbacks
+    bot = WhatsAppBot(headless=False)
+    try:
+        bot.iniciar(cb_log)
+        total = len(colaboradores)
+        sucessos = 0
+        erros = 0
+        for colaborador in colaboradores:
+            nome = colaborador.get("nome_completo", "")
+            telefone = colaborador.get("telefone", "")
+            if not telefone:
+                cb_log(f"Telefone não cadastrado para: {nome}", "erro")
+                erros += 1
+                cb_progresso(total, sucessos, erros)
+                continue
+            cb_log(f"Enviando para {nome}...", "info")
+            if caminho_arquivo:
+                enviou = bot.enviar_arquivo(caminho_arquivo, telefone, mensagem)
+            else:
+                enviou = bot.enviar_texto(telefone, mensagem)
+            if enviou:
+                cb_log(f"Sucesso: {nome}", "sucesso")
+                sucessos += 1
+            else:
+                cb_log(f"Falha ao enviar para: {nome}", "erro")
+                erros += 1
+            cb_progresso(total, sucessos, erros)
+    finally:
+        input("Pressione ENTER para finalizar o processo...")
+        bot.fechar()
+        cb_log("Processo finalizado.", "info")
+
 
 def processar_fila_envio(caminhos_arquivos: List[str], mensagem: str, callbacks):
     """
@@ -178,7 +234,7 @@ def processar_fila_envio(caminhos_arquivos: List[str], mensagem: str, callbacks)
                 cb_log(f"Sucesso: {nome_arquivo}", "sucesso")
                 sucessos += 1
 
-                file_organizer.mover_pdf(nome_arquivo) 
+                file_organizer.mover_arquivo(nome_arquivo)
             else:
                 cb_log(f"Falha ao enviar: {nome_arquivo}", "erro")
                 erros += 1
